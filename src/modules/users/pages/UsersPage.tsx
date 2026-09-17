@@ -1,0 +1,468 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import React, { useState, useEffect } from 'react';
+import { Users, UserPlus, Search, CheckCircle2, X, RefreshCw, AlertCircle, Lock } from 'lucide-react';
+import { apiGet, apiPost } from '../../../api/client/apiClient';
+import { useAuth } from '../../authentication/providers/AuthProvider';
+
+interface UserItem {
+  id: string;
+  name: string;
+  email: string;
+  mobile: string | null;
+  role: string;
+  branch: string;
+  status: string;
+}
+
+export const UsersPage: React.FC = () => {
+  const auth = useAuth();
+  const { activeContext, availableContexts } = auth;
+  const [users, setUsers] = useState<UserItem[]>([]);
+  const [availableBranches, setAvailableBranches] = useState<{ id: string; name: string }[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [submitting, setSubmitting] = useState<boolean>(false);
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [roleFilter, setRoleFilter] = useState<string>('ALL');
+
+  const isPlatformAdmin = activeContext?.scope_type === 'PLATFORM';
+  const isDean = activeContext?.role_codes.includes('INSTITUTION_ADMIN') || activeContext?.scope_type === 'TENANT';
+  const isPrincipal = activeContext?.role_codes.includes('BRANCH_ADMIN') && activeContext?.scope_type === 'BRANCH';
+  const canCreateUser = auth.hasPermission('user.create');
+
+  const userBranchName =
+    availableContexts.find((c) => c.assignment_id === activeContext?.assignment_id)?.branch?.name ||
+    'Assigned Campus';
+
+  // 2-Tab Modal State
+  const [showAddModal, setShowAddModal] = useState<boolean>(false);
+  const [activeTab, setActiveTab] = useState<'profile' | 'rbac'>('profile');
+  const [modalError, setModalError] = useState<string | null>(null);
+
+  // Form Fields
+  const [fullName, setFullName] = useState<string>('');
+  const [email, setEmail] = useState<string>('');
+  const [mobile, setMobile] = useState<string>('');
+  const [role, setRole] = useState<string>(isPrincipal ? 'OFFICE_STAFF' : 'BRANCH_ADMIN');
+  const [branchId, setBranchId] = useState<string>('');
+
+  const [notification, setNotification] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isPrincipal) {
+      setRole('OFFICE_STAFF');
+    } else if (isDean) {
+      setRole('BRANCH_ADMIN');
+    }
+  }, [isPrincipal, isDean, userBranchName]);
+
+  const fetchUsers = async () => {
+    setLoading(true);
+    try {
+      const data = await apiGet<UserItem[]>('/users');
+      setUsers(data);
+    } catch (err) {
+      console.error('Failed to fetch users:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchBranches = async () => {
+    try {
+      const data = await apiGet<any[]>('/branches');
+      setAvailableBranches(data.map((b: any) => ({ id: b.id, name: b.name || b.displayName })));
+      if (data.length > 0) {
+        setBranchId(data[0].id);
+      }
+    } catch (err) {
+      console.error('Failed to fetch branches for selection:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchUsers();
+    fetchBranches();
+  }, []);
+
+  const handleAddUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setModalError(null);
+    if (!canCreateUser) {
+      setModalError('You do not have permission to create users.');
+      return;
+    }
+
+    if (!fullName.trim()) {
+      setModalError('Full Name is required on Tab 1 (User Profile)!');
+      setActiveTab('profile');
+      return;
+    }
+
+    if (!email.trim()) {
+      setModalError('Email Address is required on Tab 1 (User Profile)!');
+      setActiveTab('profile');
+      return;
+    }
+    if (!isPrincipal && role !== 'INSTITUTION_ADMIN' && !branchId) {
+      setModalError('Campus branch is required for Principal and Office Staff users.');
+      setActiveTab('rbac');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const newUser = await apiPost<UserItem>('/users', {
+        name: fullName.trim(),
+        email: email.trim(),
+        mobile: mobile.trim() || null,
+        role,
+        branch_id: isPrincipal ? null : branchId,
+        branch: isPrincipal ? userBranchName : availableBranches.find((item) => item.id === branchId)?.name,
+      });
+
+      setShowAddModal(false);
+      setFullName('');
+      setEmail('');
+      setMobile('');
+      setModalError(null);
+      setNotification(`User "${newUser.name}" created with role ${newUser.role}!`);
+      setTimeout(() => setNotification(null), 4000);
+      await fetchUsers();
+    } catch (err: any) {
+      console.error('Failed to add user:', err);
+      setModalError(err.message || 'Failed to create user.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const filteredUsers = users.filter((u) => {
+    const matchesSearch =
+      u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      u.email.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesRole = roleFilter === 'ALL' || u.role === roleFilter;
+    const matchesBranch = !isPrincipal || u.branch.toLowerCase().includes(userBranchName.toLowerCase()) || u.branch === 'Unassigned';
+    return matchesSearch && matchesRole && matchesBranch;
+  });
+
+  const roleLabels: Record<string, string> = {
+    INSTITUTION_ADMIN: 'Dean',
+    BRANCH_ADMIN: 'Principal',
+    OFFICE_STAFF: 'Office Staff',
+    PARENT_GUARDIAN: 'Parent',
+    PLATFORM_ADMIN: 'Platform Admin',
+    PLATFORM: 'Platform',
+    TENANT: 'Unassigned',
+    UNASSIGNED: 'Unassigned',
+  };
+
+  const roleStyles = (roleCode: string) => {
+    if (roleCode === 'INSTITUTION_ADMIN') return 'bg-purple-50 text-purple-800 border-purple-200';
+    if (roleCode === 'BRANCH_ADMIN') return 'bg-teal-50 text-teal-800 border-teal-200';
+    if (roleCode === 'OFFICE_STAFF') return 'bg-sky-50 text-sky-800 border-sky-200';
+    if (roleCode === 'PARENT_GUARDIAN') return 'bg-amber-50 text-amber-800 border-amber-200';
+    return 'bg-slate-100 text-slate-700 border-slate-200';
+  };
+
+  return (
+    <div className="min-h-full bg-slate-50 pb-20">
+      {/* Hero Header */}
+      <div className="bg-slate-900 px-4 py-6 sm:px-6 sm:py-8 md:px-10">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-600 flex items-center justify-center text-white shadow-lg flex-shrink-0">
+                <Users className="w-6 h-6" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2.5 mb-1">
+                  <h1 className="text-2xl font-bold text-white tracking-tight">Users & Roles</h1>
+                  <span className="text-xs font-semibold px-2.5 py-1 rounded-full border bg-violet-500/20 text-violet-300 border-violet-500/30">
+                    Total: {filteredUsers.length}
+                  </span>
+                </div>
+                <p className="text-slate-400 text-sm">
+                    Manage institutional staff accounts, Deans, Principals, and Office Staff with role-based access scoping.
+                </p>
+              </div>
+            </div>
+            <div className="text-right hidden sm:block">
+              <p className="text-xs text-slate-500 uppercase tracking-wider font-medium">Today</p>
+              <p className="text-white font-semibold text-sm mt-0.5">
+                {new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" })}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-4 md:px-6 py-8 space-y-6">
+        {notification && (
+          <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-2xl flex items-center justify-between text-xs font-semibold">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+              <span>{notification}</span>
+            </div>
+            <button onClick={() => setNotification(null)} className="text-emerald-600 hover:text-emerald-800">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
+        {/* Actions Bar */}
+        <div className="flex flex-col sm:flex-row justify-end items-start sm:items-center gap-3">
+          <button
+            onClick={fetchUsers}
+            className="p-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-bold transition flex items-center gap-1 shadow-sm cursor-pointer"
+            title="Refresh Users"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          </button>
+          {canCreateUser && (
+            <button
+              onClick={() => {
+                setModalError(null);
+                setShowAddModal(true);
+              }}
+              className="px-4 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold shadow-sm flex items-center gap-2 cursor-pointer transition"
+            >
+              <UserPlus className="w-4 h-4" /> Create User Account
+            </button>
+          )}
+        </div>
+
+        {/* Search & Filter Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="relative flex-1 max-w-md">
+          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+          <input
+            type="text"
+            placeholder="Search by user name or email..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-800 outline-none focus:border-teal-500 transition"
+          />
+        </div>
+
+        <div className="flex items-center gap-2 text-xs font-semibold text-slate-600">
+          <span>Filter Role:</span>
+          <select
+            value={roleFilter}
+            onChange={(e) => setRoleFilter(e.target.value)}
+            className="px-3 py-2 bg-white border border-slate-200 rounded-xl outline-none"
+          >
+            <option value="ALL">All Roles</option>
+            <option value="INSTITUTION_ADMIN">Dean (Institution Admin)</option>
+            <option value="BRANCH_ADMIN">Principal (Branch Admin)</option>
+            <option value="OFFICE_STAFF">Office Staff</option>
+          </select>
+        </div>
+      </div>
+
+      {/* User Table */}
+      {loading ? (
+        <div className="py-12 text-center text-xs font-semibold text-slate-400 flex items-center justify-center gap-2">
+          <RefreshCw className="w-5 h-5 animate-spin text-teal-600" /> Loading users...
+        </div>
+      ) : filteredUsers.length === 0 ? (
+        <div className="bg-white p-8 rounded-3xl border border-slate-200 text-center space-y-2">
+          <Users className="w-10 h-10 text-slate-300 mx-auto" />
+          <p className="text-sm font-bold text-slate-700">No User Accounts Found</p>
+        </div>
+      ) : (
+        <div className="w-full overflow-x-auto bg-white rounded-3xl border border-slate-200 shadow-xs">
+          <table className="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider text-[10px]">
+                <th className="py-3.5 px-4">Full Name</th>
+                <th className="py-3.5 px-4">Email</th>
+                <th className="py-3.5 px-4">Mobile</th>
+                <th className="py-3.5 px-4">RBAC Role</th>
+                <th className="py-3.5 px-4">Assigned Campus</th>
+                <th className="py-3.5 px-4">Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 font-medium text-slate-800">
+              {filteredUsers.map((u) => (
+                <tr key={u.id} className="hover:bg-slate-50/80 transition">
+                  <td className="py-3 px-4 font-bold text-slate-900">{u.name}</td>
+                  <td className="py-3 px-4 text-slate-600">{u.email}</td>
+                  <td className="py-3 px-4 text-slate-500 font-mono text-[11px]">{u.mobile || '-'}</td>
+                  <td className="py-3 px-4">
+                    <span
+                      className={`px-2.5 py-0.5 rounded-lg text-[10px] font-bold border ${roleStyles(u.role)}`}
+                    >
+                      {roleLabels[u.role] || u.role}
+                    </span>
+                  </td>
+                  <td className="py-3 px-4 text-slate-600">{u.branch}</td>
+                  <td className="py-3 px-4">
+                    <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-full text-[10px] font-bold">
+                      {u.status}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* 2-TAB CREATE USER MODAL */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 z-50">
+          <div className="bg-white rounded-t-3xl sm:rounded-3xl border border-slate-200 shadow-2xl max-w-md w-full max-h-[90vh] sm:max-h-none overflow-y-auto p-6 space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                <UserPlus className="w-5 h-5 text-teal-600" /> Create User Account
+              </h3>
+              <button onClick={() => setShowAddModal(false)} className="text-slate-400 hover:text-slate-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {modalError && (
+              <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-xl text-xs font-semibold flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
+                <span>{modalError}</span>
+              </div>
+            )}
+
+            {/* Tab Header */}
+            <div className="flex border-b border-slate-200 text-xs font-bold">
+              <button
+                type="button"
+                onClick={() => setActiveTab('profile')}
+                className={`py-2 px-4 border-b-2 transition ${
+                  activeTab === 'profile' ? 'border-teal-600 text-teal-700' : 'border-transparent text-slate-400'
+                }`}
+              >
+                1. User Profile *
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('rbac')}
+                className={`py-2 px-4 border-b-2 transition ${
+                  activeTab === 'rbac' ? 'border-teal-600 text-teal-700' : 'border-transparent text-slate-400'
+                }`}
+              >
+                2. Role & Access
+              </button>
+            </div>
+
+            <form onSubmit={handleAddUser} className="space-y-4 text-xs">
+              {/* TAB 1: PROFILE */}
+              <div className={activeTab === 'profile' ? 'space-y-3' : 'hidden'}>
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Full Name *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Dr. K. V. Rao"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 border rounded-xl font-medium outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Email Address *</label>
+                  <input
+                    type="email"
+                    required
+                    placeholder="Enter official email address"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 border rounded-xl font-medium outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Mobile Phone Number</label>
+                  <input
+                    type="text"
+                    placeholder="Enter mobile number"
+                    value={mobile}
+                    onChange={(e) => setMobile(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 border rounded-xl font-medium outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* TAB 2: RBAC */}
+              <div className={activeTab === 'rbac' ? 'space-y-3' : 'hidden'}>
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Assigned RBAC Role *</label>
+                  <select
+                    value={role}
+                    onChange={(e) => setRole(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 border rounded-xl font-medium outline-none"
+                  >
+                    {isPlatformAdmin && <option value="INSTITUTION_ADMIN">Dean (Institution Admin)</option>}
+                    {!isPrincipal && <option value="BRANCH_ADMIN">Principal (Branch Admin)</option>}
+                    <option value="OFFICE_STAFF">Office Staff</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Primary Campus Branch</label>
+                  {isPrincipal ? (
+                    <div className="p-2.5 bg-slate-100 border border-slate-200 rounded-xl flex items-center justify-between text-xs font-bold text-slate-700">
+                      <span>{userBranchName}</span>
+                      <span className="text-[10px] text-slate-500 font-semibold flex items-center gap-1">
+                        <Lock className="w-3 h-3" /> Locked to Your Campus
+                      </span>
+                    </div>
+                  ) : (
+                    <select
+                      value={branchId}
+                      onChange={(e) => setBranchId(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 border rounded-xl font-medium outline-none"
+                    >
+                      {availableBranches.length > 0 ? (
+                        availableBranches.map((b) => (
+                          <option key={b.id} value={b.id}>
+                            {b.name}
+                          </option>
+                        ))
+                      ) : (
+                        <option value="">No campus branches available</option>
+                      )}
+                    </select>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex justify-between items-center pt-3 border-t font-bold">
+                {activeTab === 'profile' ? (
+                  <button type="button" onClick={() => setActiveTab('rbac')} className="px-3 py-2 bg-slate-100 text-slate-700 rounded-xl">
+                    Next
+                  </button>
+                ) : (
+                  <button type="button" onClick={() => setActiveTab('profile')} className="px-3 py-2 bg-slate-100 text-slate-700 rounded-xl">
+                    Back
+                  </button>
+                )}
+
+                <div className="flex gap-2">
+                  <button type="button" onClick={() => setShowAddModal(false)} className="px-3 py-2 bg-slate-100 text-slate-700 rounded-xl">
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl shadow-xs transition cursor-pointer disabled:opacity-50"
+                  >
+                    {submitting ? 'Creating...' : 'Create User'}
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  </div>
+  );
+};
