@@ -13,7 +13,9 @@ export interface StudentListItem {
   phone?: string | null;
   email?: string | null;
   status: string;
+  metadata?: Record<string, unknown> | null;
   enrollmentId?: string | null;
+  enrollmentMetadata?: Record<string, unknown> | null;
   branchId?: string | null;
   branchCode?: string | null;
   branchName?: string | null;
@@ -40,6 +42,8 @@ export interface StudentListItem {
   guardianRelationship?: string | null;
   guardianPhone?: string | null;
   guardianEmail?: string | null;
+  guardianAddress?: string | null;
+  guardianMetadata?: Record<string, unknown> | null;
   receivesNotifications?: boolean | null;
 }
 
@@ -47,15 +51,10 @@ export interface StudentInlineUpdatePayload {
   student_name?: string | null;
   gender?: string | null;
   date_of_birth?: string | null;
-  student_mobile?: string | null;
-  student_email?: string | null;
-  roll_number?: string | null;
-  joining_date?: string | null;
-  ending_date?: string | null;
+  admission_date?: string | null;
   guardian_name?: string | null;
   guardian_relationship?: string | null;
   guardian_phone?: string | null;
-  guardian_email?: string | null;
 }
 
 export const studentsApi = {

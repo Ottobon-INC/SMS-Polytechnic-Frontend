@@ -30,20 +30,14 @@ export type ManualAddStudentRequest = {
   date_of_birth: string;
   gender: string;
   admission_number: string;
-  diploma_registration_number?: string | null;
   branch_id: string;
   academic_year_id?: string | null;
   department_id?: string | null;
   academic_period_id?: string | null;
   section_id: string;
-  entry_type: "REGULAR" | "LATERAL_ENTRY" | "TRANSFER" | "READMISSION";
-  roll_number?: string | null;
   admission_date?: string | null;
-  student_phone?: string | null;
-  student_email?: string | null;
   guardian_name: string;
   guardian_phone: string;
-  guardian_email?: string | null;
   relationship_type: string;
 };
 

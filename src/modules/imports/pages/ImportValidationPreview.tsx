@@ -37,7 +37,7 @@ function getEditableValue(value: unknown): string {
   return "";
 }
 
-const studentDateColumns = new Set(["Date Of Birth", "Joining Date", "Ending Date"]);
+const studentDateColumns = new Set(["Date Of Birth", "Admission Date"]);
 
 function normalizeDateValue(value: unknown): unknown {
   if (typeof value !== "string") return value;
@@ -61,14 +61,7 @@ function normalizeFieldLabel(value?: string): string {
   return (value ?? "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 }
 
-const columnIssueAliases: Record<string, string[]> = {
-  "Admission No": ["Admission Number"],
-  "Student Name": ["Student Full Name"],
-  "Date Of Birth": ["Date of Birth"],
-  "Guardian Phone": ["Guardian Mobile"],
-  Relationship: ["Guardian Relationship"],
-  "Roll No": ["Roll Number"],
-};
+const columnIssueAliases: Record<string, string[]> = {};
 
 function issueMatchesColumn(issueField: string | undefined, column: string): boolean {
   const normalizedField = normalizeFieldLabel(issueField);
@@ -79,27 +72,19 @@ function issueMatchesColumn(issueField: string | undefined, column: string): boo
 }
 
 const studentPreviewColumns = [
-  "Admission No",
+  "Admission Number",
   "Student Name",
-  "Gender",
   "Date Of Birth",
-  "Student Mobile",
-  "Student Email",
+  "Gender",
+  "Admission Date",
   "Branch Code",
   "Academic Year",
   "Department Code",
-  "Academic Period Code",
-  "Department",
-  "Academic Period",
+  "Year/Semester",
   "Section",
-  "Roll No",
-  "Entry Type",
-  "Diploma Registration Number",
   "Guardian Name",
-  "Relationship",
+  "Guardian Relationship",
   "Guardian Phone",
-  "Guardian Email",
-  "Student Created",
 ] as const;
 
 const feePreviewColumns = [
@@ -532,7 +517,7 @@ export function ImportValidationPreview({ importType = "students" }: ImportValid
                               <input
                                 value={getEditableValue(editedRow[col])}
                                 onChange={(e) => updateEditedCell(col, e.target.value)}
-                                disabled={col === "Student Created" || isSavingRow}
+                                disabled={isSavingRow}
                                 title={colError?.message}
                                 className={`w-48 rounded-md border px-2.5 py-1.5 text-xs outline-none focus:ring-2 disabled:bg-slate-50 disabled:text-slate-400 transition-all ${
                                   hasError 

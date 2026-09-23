@@ -32,7 +32,7 @@ export function ManualAddStudentPage() {
 
         <section className="rounded-lg bg-slate-950 px-5 py-5 text-white shadow-sm">
           <p className="text-xs font-bold uppercase text-teal-300">Placement Flow</p>
-          <h2 className="mt-1 text-2xl font-black">Academic Year → Department → Academic Period → Section</h2>
+          <h2 className="mt-1 text-2xl font-black">Academic Year → Department → Year/Semester → Section</h2>
           <p className="mt-1 text-sm text-slate-300">
             Required dropdowns are loaded from the active Polytechnic academic setup.
           </p>

@@ -16,6 +16,8 @@ type ApiExamSubject = {
   id: string;
   exam_id: string;
   section_subject_id?: string | null;
+  section_id?: string | null;
+  section_name?: string | null;
   subject_id: string;
   subject_code?: string | null;
   subject_name?: string | null;
@@ -54,7 +56,10 @@ type ApiStudentExamRecord = {
   student_id: string;
   enrollment_id: string;
   student_name?: string | null;
+  admission_number?: string | null;
   roll_number?: string | null;
+  section_id?: string | null;
+  section_name?: string | null;
   marks_obtained?: number | null;
   attendance_status: StudentExamRecord["attendanceStatus"];
   result_status?: StudentExamRecord["resultStatus"];
@@ -68,6 +73,8 @@ function mapExamSubject(subject: ApiExamSubject): ExamSubject {
     id: subject.id,
     examId: subject.exam_id,
     sectionSubjectId: subject.section_subject_id,
+    sectionId: subject.section_id,
+    sectionName: subject.section_name,
     subjectId: subject.subject_id,
     subjectCode: subject.subject_code,
     subjectName: subject.subject_name,
@@ -110,7 +117,10 @@ function mapRecord(record: ApiStudentExamRecord): StudentExamRecord {
     studentId: record.student_id,
     enrollmentId: record.enrollment_id,
     studentName: record.student_name,
+    admissionNumber: record.admission_number,
     rollNumber: record.roll_number,
+    sectionId: record.section_id,
+    sectionName: record.section_name,
     marksObtained: record.marks_obtained,
     attendanceStatus: record.attendance_status,
     resultStatus: record.result_status,
@@ -151,6 +161,16 @@ export const examinationsApi = {
 
   async publishExam(examId: string): Promise<Exam> {
     const data = await apiPost<ApiExam>(`${API_BASE_URL}/${examId}/publish`, {});
+    return mapExam(data);
+  },
+
+  async submitExam(examId: string): Promise<Exam> {
+    const data = await apiPost<ApiExam>(`${API_BASE_URL}/${examId}/submit`, {});
+    return mapExam(data);
+  },
+
+  async returnExam(examId: string, reason: string): Promise<Exam> {
+    const data = await apiPost<ApiExam>(`${API_BASE_URL}/${examId}/return`, { reason });
     return mapExam(data);
   },
 

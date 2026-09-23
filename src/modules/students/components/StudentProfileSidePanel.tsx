@@ -15,13 +15,20 @@ const formatDate = (val: unknown) => {
   if (!match) return str;
   return `${match[3]}/${match[2]}/${match[1]}`;
 };
+const formatYearSemester = (code?: string | null, name?: string | null) => {
+  if (name) return name;
+  if (code === "FIRST_YEAR_ANNUAL") return "First Year";
+  const semesterMatch = /^SEMESTER_(\d+)$/.exec(code ?? "");
+  if (semesterMatch) return `Semester ${semesterMatch[1]}`;
+  return code;
+};
 
 export const StudentProfileSidePanel: React.FC<StudentProfileSidePanelProps> = ({ student, onClose }) => {
   if (!student) return null;
 
   const displayName = student.fullName ?? student.name;
   const sectionDisplay = student.sectionName;
-  const periodDisplay = student.academicPeriodCode && student.academicPeriodName ? `${student.academicPeriodCode} - ${student.academicPeriodName}` : student.academicPeriodName;
+  const periodDisplay = formatYearSemester(student.academicPeriodCode, student.academicPeriodName);
 
   return (
     <>
@@ -71,14 +78,12 @@ export const StudentProfileSidePanel: React.FC<StudentProfileSidePanelProps> = (
               <FileText className="w-4 h-4" /> Academic Details
             </h3>
             <div className="grid grid-cols-2 gap-y-4 gap-x-4 text-sm">
+              <Detail label="Admission Number" value={formatCellValue(student.admissionNumber)} />
+              <Detail label="Admission Date" value={formatDate(student.admissionDate)} />
               <Detail label="Department" value={formatCellValue(student.departmentName ?? student.departmentCode)} />
               <Detail label="Academic Year" value={formatCellValue(student.academicYearName ?? student.admissionYear)} />
-              <Detail label="Academic Period" value={formatCellValue(periodDisplay)} />
+              <Detail label="Year/Semester" value={formatCellValue(periodDisplay)} />
               <Detail label="Section" value={formatCellValue(sectionDisplay)} />
-              <Detail label="Roll Number" value={formatCellValue(student.rollNumber)} />
-              <Detail label="Entry Type" value={formatCellValue(student.entryType)} />
-              <Detail label="Registration Number" value={formatCellValue(student.diplomaRegistrationNumber)} />
-              <Detail label="Admission Date" value={formatDate(student.admissionDate)} />
             </div>
           </section>
 
@@ -88,6 +93,7 @@ export const StudentProfileSidePanel: React.FC<StudentProfileSidePanelProps> = (
               <User className="w-4 h-4" /> Personal Information
             </h3>
             <div className="grid grid-cols-2 gap-y-4 gap-x-4 text-sm">
+              <Detail label="Student Name" value={formatCellValue(displayName)} />
               <Detail label="Gender" value={formatCellValue(student.gender)} />
               <Detail label="Date of Birth" value={formatDate(student.dateOfBirth)} />
             </div>
@@ -96,19 +102,14 @@ export const StudentProfileSidePanel: React.FC<StudentProfileSidePanelProps> = (
           {/* Contact Info */}
           <section className="space-y-3">
             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5 border-b border-slate-100 pb-2">
-              <Phone className="w-4 h-4" /> Contact & Guardian
+              <Phone className="w-4 h-4" /> Guardian
             </h3>
             <div className="space-y-4 text-sm">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Detail label="Student Phone" value={formatCellValue(student.phone)} />
-                <Detail label="Student Email" value={formatCellValue(student.email)} />
-              </div>
               <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3">
                   <Detail label="Guardian Name" value={formatCellValue(student.guardianName)} />
                   <Detail label="Relationship" value={formatCellValue(student.guardianRelationship)} />
                   <Detail label="Guardian Phone" value={formatCellValue(student.guardianPhone)} />
-                  <Detail label="Guardian Email" value={formatCellValue(student.guardianEmail)} />
                 </div>
               </div>
             </div>

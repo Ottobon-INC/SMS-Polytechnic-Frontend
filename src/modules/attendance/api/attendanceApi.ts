@@ -37,8 +37,15 @@ export const attendanceApi = {
   returnSession: (sessionId: string, payload: { reason?: string }) =>
     apiPost<AttendanceSessionResponse>(`/attendance/sessions/${sessionId}/return`, payload),
 
-  getSectionsStatus: (date: string, academicYearId?: string, departmentId?: string, academicPeriodId?: string) => {
+  getSectionsStatus: (
+    date: string,
+    branchId?: string,
+    academicYearId?: string,
+    departmentId?: string,
+    academicPeriodId?: string,
+  ) => {
     const params = new URLSearchParams({ date });
+    if (branchId) params.append("branchId", branchId);
     if (academicYearId) params.append("academicYearId", academicYearId);
     if (departmentId) params.append("departmentId", departmentId);
     if (academicPeriodId) params.append("academicPeriodId", academicPeriodId);

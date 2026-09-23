@@ -50,8 +50,10 @@ function departmentDisplay(student: StudentListItem): string {
 }
 
 function periodDisplay(student: StudentListItem): string {
+  if (student.academicPeriodName) return student.academicPeriodName;
   if (student.academicPeriodCode === "FIRST_YEAR_ANNUAL") return "First Year";
-  if (student.academicPeriodCode && student.academicPeriodName) return `${student.academicPeriodCode} - ${student.academicPeriodName}`;
+  const semesterMatch = /^SEMESTER_(\d+)$/.exec(student.academicPeriodCode ?? "");
+  if (semesterMatch) return `Semester ${semesterMatch[1]}`;
   return valueOrDash(student.academicPeriodName ?? student.academicPeriodCode);
 }
 
@@ -68,11 +70,8 @@ const columns: Column[] = [
   { key: "name", label: "Student", value: (s) => valueOrDash(s.fullName ?? s.name), updateKey: "student_name", className: "font-bold text-slate-900" },
   { key: "academicYear", label: "Academic Year", value: academicYearDisplay },
   { key: "department", label: "Department", value: departmentDisplay },
-  { key: "period", label: "Academic Period", value: periodDisplay },
+  { key: "period", label: "Year/Semester", value: periodDisplay },
   { key: "section", label: "Section", value: sectionDisplay },
-  { key: "rollNumber", label: "Roll No", value: (s) => valueOrDash(s.rollNumber), updateKey: "roll_number" },
-  { key: "entryType", label: "Entry Type", value: (s) => labelFromCode(s.entryType) },
-  { key: "studentPhone", label: "Student Phone", value: (s) => valueOrDash(s.phone), updateKey: "student_mobile" },
   { key: "guardianPhone", label: "Guardian Phone", value: (s) => valueOrDash(s.guardianPhone), updateKey: "guardian_phone" },
 ];
 
@@ -80,10 +79,9 @@ const editColumns: Column[] = [
   ...columns,
   { key: "gender", label: "Gender", value: (s) => valueOrDash(s.gender), updateKey: "gender", inputType: "select", options: ["MALE", "FEMALE", "OTHER", "UNSPECIFIED"] },
   { key: "dateOfBirth", label: "Date Of Birth", value: (s) => dateValue(s.dateOfBirth), updateKey: "date_of_birth", inputType: "date" },
-  { key: "studentEmail", label: "Student Email", value: (s) => valueOrDash(s.email), updateKey: "student_email" },
+  { key: "admissionDate", label: "Admission Date", value: (s) => dateValue(s.admissionDate), updateKey: "admission_date", inputType: "date" },
   { key: "guardianName", label: "Guardian Name", value: (s) => valueOrDash(s.guardianName), updateKey: "guardian_name" },
   { key: "guardianRelationship", label: "Relationship", value: (s) => valueOrDash(s.guardianRelationship), updateKey: "guardian_relationship", inputType: "select", options: ["FATHER", "MOTHER", "LEGAL_GUARDIAN", "RELATIVE", "SPONSOR", "OTHER"] },
-  { key: "guardianEmail", label: "Guardian Email", value: (s) => valueOrDash(s.guardianEmail), updateKey: "guardian_email" },
 ];
 
 export function StudentsPage() {
@@ -135,7 +133,6 @@ export function StudentsPage() {
         student.fullName,
         student.name,
         student.admissionNumber,
-        student.rollNumber,
         student.academicYearName,
         student.admissionYear,
         student.departmentName,
@@ -153,7 +150,7 @@ export function StudentsPage() {
   }, [periodFilter, departmentFilter, search, students]);
 
   const activeStudents = filteredStudents.filter((student) => student.enrollmentStatus === "ACTIVE" || student.status === "ACTIVE").length;
-  const lateralEntries = filteredStudents.filter((student) => student.entryType === "LATERAL_ENTRY").length;
+  const departmentCount = new Set(filteredStudents.map((student) => student.departmentId).filter(Boolean)).size;
   const missingGuardianPhone = filteredStudents.filter((student) => !student.guardianPhone).length;
   const activeColumns = editMode ? editColumns : columns;
 
@@ -203,7 +200,7 @@ export function StudentsPage() {
                 <p className="text-xs font-black uppercase text-blue-600">Student Records</p>
                 <h1 className="mt-1 text-2xl font-black text-slate-950">Student Directory</h1>
                 <p className="mt-1 max-w-4xl text-sm text-slate-500">
-                  Review enrolled students by academic year, department, academic period, section, and guardian contact readiness.
+                  Review enrolled students by academic year, department, Year/Semester, section, and guardian contact readiness.
                 </p>
               </div>
             </div>
@@ -249,8 +246,8 @@ export function StudentsPage() {
             </div>
             <div className="grid grid-cols-3 gap-3 text-center">
               <Metric label="Active" value={activeStudents} tone="blue" />
-              <Metric label="Lateral Entry" value={lateralEntries} tone="amber" />
-              <Metric label="Missing Phone" value={missingGuardianPhone} tone="rose" />
+              <Metric label="Departments" value={departmentCount} tone="amber" />
+              <Metric label="Missing Guardian Phone" value={missingGuardianPhone} tone="rose" />
             </div>
           </div>
         </section>
@@ -276,7 +273,7 @@ export function StudentsPage() {
             {departments.map(([id, label]) => <option key={id} value={id}>{label}</option>)}
           </select>
           <select value={periodFilter} onChange={(e) => setPeriodFilter(e.target.value)} className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100">
-            <option value="ALL">All periods</option>
+            <option value="ALL">All Year/Semester</option>
             {periods.map(([id, label]) => <option key={id} value={id}>{label}</option>)}
           </select>
         </section>
@@ -306,7 +303,7 @@ export function StudentsPage() {
               <p className="text-xs font-bold uppercase text-slate-400">{filteredStudents.length} matching records</p>
             </div>
             <div className="max-h-[66vh] overflow-auto">
-              <table className={`${editMode ? "min-w-[2200px]" : "min-w-[1220px]"} w-full text-left text-xs`}>
+              <table className={`${editMode ? "min-w-[1480px]" : "min-w-[1120px]"} w-full text-left text-xs`}>
                 <thead className="sticky top-0 z-10 bg-slate-50 text-[10px] font-black uppercase text-slate-500">
                   <tr>
                     {activeColumns.map((column) => <th key={column.key} className="border-b border-r border-slate-200 px-3 py-3">{column.label}</th>)}

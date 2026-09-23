@@ -32,7 +32,7 @@ export function StudentImportCenter() {
               <p className="text-xs font-bold uppercase text-teal-300">Onboarding Workspace</p>
               <h2 className="mt-1 text-2xl font-black">Create and Validate Student Records</h2>
               <p className="mt-1 text-sm text-slate-300">
-                Academic placement follows Branch, Academic Year, Department, Academic Period, and Section.
+                Academic placement follows Branch, Academic Year, Department, Year/Semester, and Section.
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -86,7 +86,7 @@ export function StudentImportCenter() {
           <div className="md:col-span-8">
             <h3 className="mb-4 text-sm font-black uppercase text-slate-950">Recommended Flow</h3>
             <div className="grid gap-3">
-              <GuideStep n="01" title="Confirm academic setup" text="Academic year, departments, academic periods, and sections should exist before onboarding students." />
+              <GuideStep n="01" title="Confirm academic setup" text="Academic year, departments, Year/Semester values, and sections should exist before onboarding students." />
               <GuideStep n="02" title="Choose manual or template import" text="Use manual add for one student. Use the Excel template for bulk admissions or large corrections." />
               <GuideStep n="03" title="Validate before records are created" text="Template uploads create a preview first. Student records are saved only after the validated import is committed." />
             </div>
@@ -101,7 +101,7 @@ export function StudentImportCenter() {
               {[
                 "Keep admission numbers unique",
                 "Use Academic Year and Department Code",
-                "Use Academic Period Code",
+                "Use Year/Semester",
                 "Do not modify template headers",
               ].map((tip) => (
                 <li key={tip} className="flex items-start gap-2.5">
@@ -112,7 +112,7 @@ export function StudentImportCenter() {
             </ul>
             <div className="mt-6 rounded-lg border border-blue-100 bg-blue-50 px-4 py-3">
               <p className="text-xs font-semibold leading-relaxed text-blue-800">
-                The current Polytechnic template uses Branch Code, Academic Year, Department Code, Academic Period Code, and Section.
+                The current Polytechnic template uses Admission Number, Student Name, placement, and guardian contact fields only.
               </p>
             </div>
           </div>

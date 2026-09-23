@@ -31,7 +31,7 @@ export const AttendanceLandingPage: React.FC = () => {
   const handleLoadAttendance = (sectionId: string) => {
     setError(null);
     createSessionMutation.mutate(
-      { sectionId, attendanceDate },
+      { sectionId, branchId: selectedBranch, attendanceDate },
       {
         onSuccess: (session) => {
           navigate(`/attendance/session/${session.id}`);

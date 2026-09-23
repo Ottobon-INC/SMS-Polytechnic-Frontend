@@ -50,7 +50,7 @@ export const AttendanceSessionPage: React.FC = () => {
     if (session) {
       const initial: Record<string, AttendanceStatus> = {};
       session.students.forEach((s) => {
-        initial[s.enrollmentId] = s.attendanceStatus === "UNMARKED" && session.status === "DRAFT" ? "PRESENT" : s.attendanceStatus;
+        initial[s.enrollmentId] = s.attendanceStatus === "UNMARKED" && session.status !== "FINALIZED" ? "PRESENT" : s.attendanceStatus;
       });
       setLocalState(initial);
     }
@@ -70,13 +70,13 @@ export const AttendanceSessionPage: React.FC = () => {
   }, []);
 
   const handleMarkStudent = (enrollmentId: string, status: AttendanceStatus) => {
-    if (session?.status !== "DRAFT") return;
+    if (!session || session.status === "FINALIZED" || !auth.hasPermission("attendance.mark")) return;
     setLocalState((prev) => ({ ...prev, [enrollmentId]: status }));
     if (showUnmarkedWarning) setShowUnmarkedWarning(false);
   };
 
   const handleMarkAllPresent = () => {
-    if (session?.status !== "DRAFT") return;
+    if (!session || session.status === "FINALIZED" || !auth.hasPermission("attendance.mark")) return;
     setLocalState((prev) => {
       const next = { ...prev };
       session.students.forEach((s) => {
@@ -88,7 +88,7 @@ export const AttendanceSessionPage: React.FC = () => {
   };
 
   const handleClearAll = () => {
-    if (session?.status !== "DRAFT") return;
+    if (!session || session.status === "FINALIZED" || !auth.hasPermission("attendance.mark")) return;
     setLocalState((prev) => {
       const next = { ...prev };
       session.students.forEach((s) => {
@@ -99,7 +99,7 @@ export const AttendanceSessionPage: React.FC = () => {
   };
 
   const handleSaveDraft = () => {
-    if (!session || session.status !== "DRAFT") return;
+    if (!session || session.status === "FINALIZED" || !auth.hasPermission("attendance.mark")) return;
     setError(null);
     setSuccessMsg(null);
     const records = Object.entries(localState).map(([enrollmentId, attendanceStatus]) => ({
@@ -110,7 +110,7 @@ export const AttendanceSessionPage: React.FC = () => {
       { sessionId: session.id, payload: { records } },
       {
         onSuccess: () => {
-          setSuccessMsg("Draft saved.");
+          setSuccessMsg(session.status === "SUBMITTED" ? "Attendance updates saved for review." : "Draft saved.");
           setLastSaved(new Date());
           setTimeout(() => setSuccessMsg(null), 3000);
         },
@@ -203,10 +203,12 @@ export const AttendanceSessionPage: React.FC = () => {
   const isFinalized = session.status === "FINALIZED";
 
   const canMark = auth.hasPermission("attendance.mark");
-  const canSubmit = auth.hasPermission("attendance.submit");
+  const canSubmit = auth.hasPermission("attendance.submit") || canMark;
   const canFinalize = auth.hasPermission("attendance.finalize");
 
-  const isEditable = isDraft && canMark;
+  const isReturned = session.status === "RETURNED";
+  const isEditable = !isFinalized && canMark;
+  const canSubmitForReview = canSubmit && (isDraft || isReturned);
   const isPrincipalView = !canMark && canFinalize;
 
   const progress = counts.total > 0 ? Math.round(((counts.total - counts.unmarked) / counts.total) * 100) : 0;
@@ -239,6 +241,17 @@ export const AttendanceSessionPage: React.FC = () => {
     },
   };
   const sStyle = statusStyles[session.status as SessionStatus] ?? statusStyles.DRAFT;
+  const formatDateTime = (value?: string | null) => (
+    value
+      ? new Date(value).toLocaleString("en-IN", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        })
+      : "-"
+  );
 
   return (
     <div className="min-h-full bg-slate-50 pb-32">
@@ -381,7 +394,7 @@ export const AttendanceSessionPage: React.FC = () => {
         />
 
         {/* Session meta for finalized/submitted */}
-        {!isDraft && (session.submittedBy || session.finalizedBy) && (
+        {!isDraft && (session.submittedBy || session.lastEditedBy || session.finalizedBy) && (
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
             <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2">
               <Users className="w-4 h-4" /> Session Trail
@@ -390,13 +403,28 @@ export const AttendanceSessionPage: React.FC = () => {
               {session.submittedBy && (
                 <div className="flex items-center justify-between bg-slate-50 rounded-xl px-4 py-3 border border-slate-100">
                   <span className="text-slate-500">Submitted by</span>
-                  <span className="font-semibold text-slate-900">{session.submittedBy}</span>
+                  <span className="text-right font-semibold text-slate-900">
+                    {session.submittedBy}
+                    {session.submittedAt && <span className="block text-xs font-medium text-slate-400">{formatDateTime(session.submittedAt)}</span>}
+                  </span>
+                </div>
+              )}
+              {session.lastEditedBy && (
+                <div className="flex items-center justify-between bg-blue-50 rounded-xl px-4 py-3 border border-blue-100">
+                  <span className="text-blue-700">Last edited by</span>
+                  <span className="text-right font-semibold text-slate-900">
+                    {session.lastEditedBy}
+                    {session.lastEditedAt && <span className="block text-xs font-medium text-blue-500">{formatDateTime(session.lastEditedAt)}</span>}
+                  </span>
                 </div>
               )}
               {session.finalizedBy && (
                 <div className="flex items-center justify-between bg-slate-50 rounded-xl px-4 py-3 border border-slate-100">
                   <span className="text-slate-500">Finalized by</span>
-                  <span className="font-semibold text-slate-900">{session.finalizedBy}</span>
+                  <span className="text-right font-semibold text-slate-900">
+                    {session.finalizedBy}
+                    {session.finalizedAt && <span className="block text-xs font-medium text-slate-400">{formatDateTime(session.finalizedAt)}</span>}
+                  </span>
                 </div>
               )}
             </div>
@@ -405,7 +433,7 @@ export const AttendanceSessionPage: React.FC = () => {
       </div>
 
       {/* Sticky Bottom Action Bar */}
-      <div className="fixed bottom-[60px] lg:bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-[0_-8px_20px_-4px_rgb(0,0,0,0.08)] z-30">
+      <div className="sticky bottom-[60px] lg:bottom-0 bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-[0_-8px_20px_-4px_rgb(0,0,0,0.08)] z-30">
         <div className="max-w-5xl mx-auto px-4 md:px-6 py-3 flex items-center justify-between gap-4">
           {/* Count pills */}
           <div className="flex items-center gap-2 text-sm overflow-x-auto no-scrollbar">
@@ -432,14 +460,14 @@ export const AttendanceSessionPage: React.FC = () => {
                   className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl text-sm font-semibold transition-all disabled:opacity-50"
                 >
                   {saveDraftMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                  <span className="hidden sm:inline">Save</span>
+                  <span className="hidden sm:inline">{isSubmitted ? "Save Updates" : "Save"}</span>
                 </button>
                 {lastSaved && (
                   <span className="hidden sm:inline-block text-xs font-medium text-slate-400 italic mr-2">
                     Saved at {lastSaved.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </span>
                 )}
-                {canSubmit && (
+                {canSubmitForReview && (
                   <button
                     onClick={() => {
                       if (counts.unmarked > 0) {
@@ -459,7 +487,7 @@ export const AttendanceSessionPage: React.FC = () => {
                     className="flex items-center gap-2 px-5 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-sm font-bold transition-all disabled:opacity-50 shadow-md"
                   >
                     {submitMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                    Submit
+                    Submit for Review
                   </button>
                 )}
               </>
@@ -501,7 +529,7 @@ export const AttendanceSessionPage: React.FC = () => {
         <ConfirmModal
           title="Submit Attendance?"
           description="Once submitted, you cannot edit this attendance session. The Principal will be notified to review."
-          confirmLabel="Yes, Submit"
+          confirmLabel="Yes, Submit for Review"
           confirmClass="bg-teal-600 hover:bg-teal-700 text-white"
           onConfirm={handleSubmitConfirmed}
           onCancel={() => setConfirmSubmit(false)}

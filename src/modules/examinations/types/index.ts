@@ -3,9 +3,6 @@ export type ExamType =
   | "MID_TERM"
   | "BOARD"
   | "PRACTICAL"
-  | "LAB"
-  | "PROJECT"
-  | "INDUSTRIAL_TRAINING"
   | "SUPPLEMENTARY";
 
 export type ExamStatus =
@@ -25,6 +22,8 @@ export interface ExamSubject {
   id: string;
   examId: string;
   sectionSubjectId?: string | null;
+  sectionId?: string | null;
+  sectionName?: string | null;
   subjectId: string;
   subjectCode?: string | null;
   subjectName?: string | null;
@@ -79,7 +78,10 @@ export interface StudentExamRecord {
   studentId: string;
   enrollmentId: string;
   studentName?: string | null;
+  admissionNumber?: string | null;
   rollNumber?: string | null;
+  sectionId?: string | null;
+  sectionName?: string | null;
   marksObtained?: number | null;
   attendanceStatus: ExamAttendanceStatus;
   resultStatus?: ExamResultStatus | null;
@@ -111,9 +113,11 @@ export interface AcademicPeriodLookup extends LookupItem {
 export interface SubjectOfferingLookup {
   id: string;
   sectionId: string;
+  sectionName?: string | null;
   subjectId: string;
   subjectCode: string;
   subjectName: string;
   subjectType?: string | null;
+  subjectCategory?: string | null;
   academicPeriodCode?: string | null;
 }

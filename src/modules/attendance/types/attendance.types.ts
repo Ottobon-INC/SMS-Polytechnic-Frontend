@@ -32,6 +32,8 @@ export interface AttendanceSessionListItem {
   openedBy: string;
   submittedBy?: string | null;
   submittedAt?: string | null;
+  lastEditedBy?: string | null;
+  lastEditedAt?: string | null;
   finalizedBy?: string | null;
   finalizedAt?: string | null;
 }
@@ -56,6 +58,8 @@ export interface AttendanceSessionResponse {
   openedBy: string;
   submittedBy?: string | null;
   submittedAt?: string | null;
+  lastEditedBy?: string | null;
+  lastEditedAt?: string | null;
   finalizedBy?: string | null;
   finalizedAt?: string | null;
   revisionReason?: string | null;
@@ -64,6 +68,7 @@ export interface AttendanceSessionResponse {
 
 export interface AttendanceSessionCreate {
   sectionId: string;
+  branchId?: string;
   attendanceDate: string; // YYYY-MM-DD
   sessionType?: SessionType;
   subjectId?: string | null;

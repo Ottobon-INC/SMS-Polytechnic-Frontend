@@ -84,6 +84,7 @@ export const AttendanceClassGrid: React.FC<AttendanceClassGridProps> = ({
   // Fetch sections status only when academic context and date are selected
   const { data: sectionsStatus, isLoading: isLoadingSections } = useAttendanceSectionsStatus(
     attendanceDate,
+    selectedBranch,
     selectedAcademicYear,
     selectedDepartment,
     selectedAcademicPeriod
@@ -166,10 +167,10 @@ export const AttendanceClassGrid: React.FC<AttendanceClassGridProps> = ({
             onChange={setSelectedAcademicPeriod}
             disabled={false}
             loading={isLoadingPeriods}
-            placeholder="Academic Period"
+            placeholder="Year/Semester"
           >
             {academicPeriods?.map((period) => (
-              <option key={period.id} value={period.id}>{period.code} - {period.name}</option>
+              <option key={period.id} value={period.id}>{period.name}</option>
             ))}
           </SelectField>
 
@@ -191,8 +192,8 @@ export const AttendanceClassGrid: React.FC<AttendanceClassGridProps> = ({
         {!selectedBranch || !selectedAcademicYear || !selectedDepartment || !selectedAcademicPeriod ? (
           <div className="h-full flex flex-col items-center justify-center text-slate-500 py-20">
             <Calendar className="w-12 h-12 text-slate-200 mb-4" />
-            <h3 className="text-lg font-bold text-slate-700 mb-1">Select Department and Academic Period</h3>
-            <p className="text-sm">Choose the academic year, department, and period to see available sections.</p>
+            <h3 className="text-lg font-bold text-slate-700 mb-1">Select Department and Year/Semester</h3>
+            <p className="text-sm">Choose the academic year, department, and Year/Semester to see available sections.</p>
           </div>
         ) : isLoadingSections ? (
           <div className="h-full flex flex-col items-center justify-center text-slate-500 py-20">
@@ -227,7 +228,7 @@ export const AttendanceClassGrid: React.FC<AttendanceClassGridProps> = ({
           <div className="h-full flex flex-col items-center justify-center text-slate-500 py-20">
             <AlertCircle className="w-12 h-12 text-slate-200 mb-4" />
             <h3 className="text-lg font-bold text-slate-700 mb-1">No Classes Found</h3>
-            <p className="text-sm">No sections are available for the selected department and academic period.</p>
+            <p className="text-sm">No sections are available for the selected department and Year/Semester.</p>
           </div>
         )}
       </div>

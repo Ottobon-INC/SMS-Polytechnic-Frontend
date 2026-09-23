@@ -10,8 +10,8 @@ export const ATTENDANCE_KEYS = {
   all: ["attendance"] as const,
   session: (id: string) => [...ATTENDANCE_KEYS.all, "session", id] as const,
   sessions: (status?: string) => [...ATTENDANCE_KEYS.all, "sessions", status || "all"] as const,
-  sectionsStatus: (date: string, academicYearId?: string, departmentId?: string, academicPeriodId?: string) =>
-    [...ATTENDANCE_KEYS.all, "sectionsStatus", date, academicYearId || "all", departmentId || "all", academicPeriodId || "all"] as const,
+  sectionsStatus: (date: string, branchId?: string, academicYearId?: string, departmentId?: string, academicPeriodId?: string) =>
+    [...ATTENDANCE_KEYS.all, "sectionsStatus", date, branchId || "all", academicYearId || "all", departmentId || "all", academicPeriodId || "all"] as const,
   lookups: ["attendance", "lookups"] as const,
 };
 
@@ -88,11 +88,11 @@ export function useReturnAttendanceSession() {
   });
 }
 
-export function useAttendanceSectionsStatus(date: string, academicYearId?: string, departmentId?: string, academicPeriodId?: string) {
+export function useAttendanceSectionsStatus(date: string, branchId?: string, academicYearId?: string, departmentId?: string, academicPeriodId?: string) {
   return useQuery({
-    queryKey: ATTENDANCE_KEYS.sectionsStatus(date, academicYearId, departmentId, academicPeriodId),
-    queryFn: () => attendanceApi.getSectionsStatus(date, academicYearId, departmentId, academicPeriodId),
-    enabled: !!academicYearId && !!departmentId && !!academicPeriodId && !!date,
+    queryKey: ATTENDANCE_KEYS.sectionsStatus(date, branchId, academicYearId, departmentId, academicPeriodId),
+    queryFn: () => attendanceApi.getSectionsStatus(date, branchId, academicYearId, departmentId, academicPeriodId),
+    enabled: !!branchId && !!academicYearId && !!departmentId && !!academicPeriodId && !!date,
     staleTime: 0, // Always fetch fresh as statuses might change
   });
 }

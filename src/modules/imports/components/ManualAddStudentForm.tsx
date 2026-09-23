@@ -40,13 +40,6 @@ const RELATIONSHIP_LABELS: Record<string, string> = {
   OTHER: "Other",
 };
 
-const ENTRY_TYPE_LABELS: Record<string, string> = {
-  REGULAR: "Regular",
-  LATERAL_ENTRY: "Lateral Entry",
-  TRANSFER: "Transfer",
-  READMISSION: "Readmission",
-};
-
 const GENDER_LABELS: Record<string, string> = {
   MALE: "Male",
   FEMALE: "Female",
@@ -67,6 +60,12 @@ function formatDepartmentLabel(department?: { code?: string; name?: string; disp
     return `${department.code} - ${department.name}`;
   }
   return department.code || department.name || "";
+}
+
+function cleanManualPayload(data: ManualAddStudentFormData): ManualAddStudentFormData {
+  return Object.fromEntries(
+    Object.entries(data).map(([key, value]) => [key, value === "" ? null : value])
+  ) as ManualAddStudentFormData;
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -208,9 +207,7 @@ function SuccessScreen({
           <SummaryField label="Admission Number" value={formData.admission_number} />
           <SummaryField label="Date of Birth" value={formData.date_of_birth} />
           <SummaryField label="Gender" value={GENDER_LABELS[formData.gender] ?? formData.gender} />
-          {formData.roll_number && (
-            <SummaryField label="Roll Number" value={formData.roll_number} />
-          )}
+          <SummaryField label="Admission Date" value={formData.admission_date} />
         </div>
       </div>
 
@@ -224,9 +221,8 @@ function SuccessScreen({
           {data.branchName && <SummaryField label="Branch" value={data.branchName} />}
           {data.academicYearName && <SummaryField label="Academic Year" value={data.academicYearName} />}
           {data.departmentName && <SummaryField label="Department" value={data.departmentName} />}
-          {data.academicPeriodName && <SummaryField label="Academic Period" value={data.academicPeriodName} />}
+          {data.academicPeriodName && <SummaryField label="Year/Semester" value={data.academicPeriodName} />}
           {data.sectionName && <SummaryField label="Section" value={data.sectionName} />}
-          <SummaryField label="Entry Type" value={ENTRY_TYPE_LABELS[formData.entry_type] ?? formData.entry_type} />
         </div>
       </div>
 
@@ -243,9 +239,6 @@ function SuccessScreen({
             value={RELATIONSHIP_LABELS[formData.relationship_type] ?? formData.relationship_type}
           />
           <SummaryField label="Phone" value={formData.guardian_phone} />
-          {formData.guardian_email && (
-            <SummaryField label="Email" value={formData.guardian_email} />
-          )}
         </div>
       </div>
 
@@ -310,7 +303,6 @@ export function ManualAddStudentForm() {
       date_of_birth: "",
       gender: "MALE",
       admission_number: "",
-      roll_number: "",
       branch_id: "",
       academic_year_id: "",
       department_id: "",
@@ -318,12 +310,7 @@ export function ManualAddStudentForm() {
       section_id: "",
       guardian_name: "",
       guardian_phone: "",
-      guardian_email: "",
       relationship_type: "FATHER",
-      entry_type: "REGULAR",
-      diploma_registration_number: "",
-      student_phone: "",
-      student_email: "",
       admission_date: "",
     },
   });
@@ -378,7 +365,7 @@ export function ManualAddStudentForm() {
 
   const onSubmit = (data: ManualAddStudentFormData) => {
     setSubmitError("");
-    manualAddMutation.mutate(data, {
+    manualAddMutation.mutate(cleanManualPayload(data), {
       onSuccess: (response) => {
         // Resolve display names from already-loaded options
         const branchName = branches?.find((b) => b.id === data.branch_id)?.name;
@@ -415,7 +402,6 @@ export function ManualAddStudentForm() {
       date_of_birth: "",
       gender: "MALE",
       admission_number: "",
-      roll_number: "",
       branch_id: currentBranch,
       academic_year_id: "",
       department_id: "",
@@ -423,12 +409,7 @@ export function ManualAddStudentForm() {
       section_id: "",
       guardian_name: "",
       guardian_phone: "",
-      guardian_email: "",
       relationship_type: "FATHER",
-      entry_type: "REGULAR",
-      diploma_registration_number: "",
-      student_phone: "",
-      student_email: "",
       admission_date: "",
     });
   };
@@ -501,14 +482,14 @@ export function ManualAddStudentForm() {
             </SelectField>
           </Field>
 
-          <Field label="Academic Period" required error={errors.academic_period_id?.message}>
+          <Field label="Year/Semester" required error={errors.academic_period_id?.message}>
             <SelectField
               value={academicPeriodId}
               onChange={(v) => setValue("academic_period_id", v)}
               disabled={false}
               loading={loadingPeriods}
             >
-              <option value="">Select Academic Period</option>
+              <option value="">Select Year/Semester</option>
               {academicPeriods?.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.code} - {p.name}
@@ -531,19 +512,8 @@ export function ManualAddStudentForm() {
               </option>
               {sections?.map((s) => (
                 <option key={s.id} value={s.id}>
-                  {s.name}{s.academicPeriodCode ? ` - ${s.academicPeriodCode}` : ""}
+                  {s.name}
                 </option>
-              ))}
-            </SelectField>
-          </Field>
-
-          <Field label="Entry Type" required error={errors.entry_type?.message}>
-            <SelectField
-              value={watch("entry_type")}
-              onChange={(v) => setValue("entry_type", v as "REGULAR" | "LATERAL_ENTRY" | "TRANSFER" | "READMISSION")}
-            >
-              {Object.entries(ENTRY_TYPE_LABELS).map(([value, label]) => (
-                <option key={value} value={value}>{label}</option>
               ))}
             </SelectField>
           </Field>
@@ -573,15 +543,6 @@ export function ManualAddStudentForm() {
             />
           </Field>
 
-          <Field label="Diploma Registration Number" error={errors.diploma_registration_number?.message}>
-            <input
-              type="text"
-              {...register("diploma_registration_number")}
-              placeholder="Optional"
-              className={inputCls}
-            />
-          </Field>
-
           <Field label="Date of Birth" required error={errors.date_of_birth?.message}>
             <input
               type="date"
@@ -602,16 +563,7 @@ export function ManualAddStudentForm() {
             </SelectField>
           </Field>
 
-          <Field label="Roll Number" error={errors.roll_number?.message} hint="Optional — assigned by the institution">
-            <input
-              type="text"
-              {...register("roll_number")}
-              placeholder="Optional"
-              className={inputCls}
-            />
-          </Field>
-
-          <Field label="Admission Date" error={errors.admission_date?.message}>
+          <Field label="Admission Date" required error={errors.admission_date?.message}>
             <input
               type="date"
               {...register("admission_date")}
@@ -619,23 +571,6 @@ export function ManualAddStudentForm() {
             />
           </Field>
 
-          <Field label="Student Phone" error={errors.student_phone?.message}>
-            <input
-              type="tel"
-              {...register("student_phone")}
-              placeholder="Optional"
-              className={inputCls}
-            />
-          </Field>
-
-          <Field label="Student Email" error={errors.student_email?.message}>
-            <input
-              type="email"
-              {...register("student_email")}
-              placeholder="Optional"
-              className={inputCls}
-            />
-          </Field>
         </div>
       </SectionCard>
 
@@ -678,14 +613,6 @@ export function ManualAddStudentForm() {
             />
           </Field>
 
-          <Field label="Email Address" error={errors.guardian_email?.message} hint="Optional — used for Parent Portal">
-            <input
-              type="email"
-              {...register("guardian_email")}
-              placeholder="Enter guardian email address"
-              className={inputCls}
-            />
-          </Field>
         </div>
       </SectionCard>
 
