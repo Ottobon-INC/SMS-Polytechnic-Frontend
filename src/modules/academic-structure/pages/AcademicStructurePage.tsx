@@ -41,6 +41,7 @@ function periodLabel(period?: AcademicPeriod | null) {
 export function AcademicStructurePage() {
   const auth = useAuth();
   const canManage = auth.hasPermission("academic_structure.manage");
+  const isHod = auth.activeContext?.role_codes.includes("HOD");
   const lockedBranchId = auth.activeContext?.branch_id ?? "";
 
   const [loading, setLoading] = useState(true);
@@ -162,12 +163,25 @@ export function AcademicStructurePage() {
   }, [academicYears, selectedAcademicYearId]);
 
   useEffect(() => {
+    if (isHod && departments.length > 0) {
+      const email = auth.appUser?.email?.toLowerCase() ?? "";
+      const name = auth.appUser?.display_name?.toUpperCase() ?? "";
+      const matchedDept = departments.find(
+        (d) =>
+          (d.code && (email.includes(`hod.${d.code.toLowerCase()}`) || name.includes(d.code.toUpperCase()))) ||
+          (d.name && name.includes(d.name.toUpperCase()))
+      );
+      if (matchedDept && selectedDepartmentId !== matchedDept.id) {
+        setSelectedDepartmentId(matchedDept.id);
+        return;
+      }
+    }
     if (selectedDepartmentId && !departments.some((department) => department.id === selectedDepartmentId)) {
       setSelectedDepartmentId("");
       return;
     }
     if (!selectedDepartmentId && departments.length > 0) setSelectedDepartmentId(departments[0].id);
-  }, [departments, selectedDepartmentId]);
+  }, [departments, selectedDepartmentId, isHod, auth.appUser]);
 
   useEffect(() => {
     if (selectedPeriodId && !periods.some((period) => period.id === selectedPeriodId)) {
@@ -467,6 +481,34 @@ export function AcademicStructurePage() {
             </div>
           </div>
         </header>
+
+        {isHod && (
+          <div className="rounded-lg border border-teal-200 bg-teal-50/70 p-4 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-teal-700 text-white font-black text-xs tracking-wider">
+                HOD
+              </span>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-bold text-slate-950 text-sm">
+                    {auth.appUser?.display_name || "Head of Department"}
+                  </h3>
+                  <span className="rounded-full bg-teal-100 border border-teal-200 px-2.5 py-0.5 text-[11px] font-bold text-teal-800">
+                    {selectedDepartment?.name || "Department Scope"}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-600 mt-0.5">
+                  Single HOD authority for all years: <strong>First Year (Annual), 3rd Sem, 4th Sem, 5th Sem, and 6th Sem</strong>. Click &ldquo;Edit Structure&rdquo; above to manage sections, weekly periods, syllabus, and evaluation marks.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="text-xs font-semibold text-teal-900 bg-white border border-teal-200 px-3 py-1.5 rounded-md shadow-xs">
+                Branch Scope: {selectedBranch?.name || "Main Campus"}
+              </span>
+            </div>
+          </div>
+        )}
 
         {error && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</div>}
 

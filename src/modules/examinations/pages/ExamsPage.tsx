@@ -139,9 +139,23 @@ export function ExamsPage({ onNavigateToMarksEntry }: { onNavigateToMarksEntry: 
   const submittedCount = exams.filter((exam) => exam.status === "SUBMITTED").length;
   const publishedCount = exams.filter((exam) => exam.status === "PUBLISHED").length;
 
+  const hodDepartmentMatch = auth.activeContext?.role_codes.includes("HOD") && auth.appUser?.email
+    ? auth.appUser.email.match(/^hod\.([a-z0-9_]+)@/)
+    : null;
+  const hodDepartment = hodDepartmentMatch ? hodDepartmentMatch[1].toUpperCase() : null;
+
   const filteredExams = useMemo(() => {
     const needle = query.trim().toLowerCase();
     return exams.filter((exam) => {
+      // HOD filtering
+      if (hodDepartment) {
+        const dept = departmentById.get(exam.departmentId);
+        const deptCode = String(dept?.code || dept?.name || "").toUpperCase();
+        if (deptCode !== hodDepartment && !deptCode.includes(hodDepartment)) {
+          return false;
+        }
+      }
+
       const haystack = [
         exam.name,
         exam.examType,
@@ -163,7 +177,15 @@ export function ExamsPage({ onNavigateToMarksEntry }: { onNavigateToMarksEntry: 
       examinationsApi.getAcademicPeriods(),
     ]);
     const academicYearId = form.academicYearId || yearData[0]?.id || "";
-    const departmentData = academicYearId ? await examinationsApi.getDepartments(academicYearId) : [];
+    let departmentData = academicYearId ? await examinationsApi.getDepartments(academicYearId) : [];
+    
+    if (hodDepartment) {
+      departmentData = departmentData.filter(d => 
+        String(d.code || d.name || "").toUpperCase() === hodDepartment || 
+        String(d.code || d.name || "").toUpperCase().includes(hodDepartment)
+      );
+    }
+    
     setBranches(branchData);
     setAcademicYears(yearData);
     setPeriods(periodData);
@@ -192,6 +214,12 @@ export function ExamsPage({ onNavigateToMarksEntry }: { onNavigateToMarksEntry: 
     if (!form.academicYearId) return;
     examinationsApi.getDepartments(form.academicYearId)
       .then((departmentData) => {
+        if (hodDepartment) {
+          departmentData = departmentData.filter(d => 
+            String(d.code || d.name || "").toUpperCase() === hodDepartment || 
+            String(d.code || d.name || "").toUpperCase().includes(hodDepartment)
+          );
+        }
         setDepartments(departmentData);
         setForm((prev) => ({
           ...prev,
@@ -199,7 +227,7 @@ export function ExamsPage({ onNavigateToMarksEntry }: { onNavigateToMarksEntry: 
         }));
       })
       .catch((err: unknown) => setError(err instanceof Error ? err.message : "Failed to load departments."));
-  }, [form.academicYearId]);
+  }, [form.academicYearId, hodDepartment]);
 
   useEffect(() => {
     if (!form.departmentId || !form.academicPeriodId) {
@@ -417,7 +445,7 @@ export function ExamsPage({ onNavigateToMarksEntry }: { onNavigateToMarksEntry: 
                     <option value="">Academic Year</option>
                     {academicYears.map((year) => <option key={year.id} value={year.id}>{year.name}</option>)}
                   </select>
-                  <select className={inputCls} required value={form.departmentId} onChange={(e) => setForm({ ...form, departmentId: e.target.value })}>
+                  <select className={inputCls} required value={form.departmentId} onChange={(e) => setForm({ ...form, departmentId: e.target.value })} disabled={departments.length === 1}>
                     <option value="">Department</option>
                     {departments.map((department) => <option key={department.id} value={department.id}>{departmentLabel(department)}</option>)}
                   </select>

@@ -4,6 +4,8 @@ export function getDashboardPathForActiveContext(context: ActiveContext | null):
   const role = context?.role_codes[0];
   if (role === "PLATFORM_ADMIN") return "/platform-admin";
   if (role === "PARENT_GUARDIAN") return "/parent-portal";
+  if (role === "STUDENT") return "/student-portal";
+  if (role === "HOD") return "/dashboard";
   return "/dashboard";
 }
 
@@ -11,5 +13,7 @@ export function getDashboardPathForContext(context: AccessContextSummary | undef
   const role = context?.role.code;
   if (role === "PLATFORM_ADMIN") return "/platform-admin";
   if (role === "PARENT_GUARDIAN") return "/parent-portal";
+  if (role === "STUDENT") return "/student-portal";
+  if (role === "HOD") return "/dashboard";
   return "/dashboard";
 }

@@ -2,6 +2,7 @@ import { useAuth } from "../../authentication/providers/AuthProvider";
 import { InstitutionDashboardShellPage } from "../../institution/pages/InstitutionDashboardShellPage";
 import { BranchDashboardShellPage } from "./BranchDashboardShellPage";
 import { DashboardShellPage } from "./DashboardShellPage";
+import { HodDashboardShellPage } from "./HodDashboardShellPage";
 
 export function DashboardRouter() {
   const auth = useAuth();
@@ -13,6 +14,10 @@ export function DashboardRouter() {
   
   if (role === "BRANCH_ADMIN") {
     return <BranchDashboardShellPage />;
+  }
+
+  if (role === "HOD") {
+    return <HodDashboardShellPage />;
   }
   
   return <DashboardShellPage />;

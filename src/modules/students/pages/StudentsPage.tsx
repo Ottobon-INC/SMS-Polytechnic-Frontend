@@ -104,6 +104,16 @@ export function StudentsPage() {
   const fetchBranchId = isTenantLevel && branchFilter ? branchFilter : undefined;
   const { data: students = [], isLoading, error, refetch } = useStudents(fetchBranchId, !isTenantLevel || !!branchFilter);
 
+  const hodDepartmentMatch = auth.activeContext?.role_codes.includes("HOD") && auth.appUser?.email
+    ? auth.appUser.email.match(/^hod\.([a-z0-9_]+)@/)
+    : null;
+  const hodDepartment = hodDepartmentMatch ? hodDepartmentMatch[1].toUpperCase() : null;
+
+  const allowedStudents = useMemo(() => {
+    if (!hodDepartment) return students;
+    return students.filter(s => s.departmentCode === hodDepartment || s.departmentName?.toUpperCase().includes(hodDepartment));
+  }, [students, hodDepartment]);
+
   useEffect(() => {
     if (isTenantLevel && !branchFilter && branches.length === 1) {
       setBranchFilter(branches[0].id);
@@ -112,7 +122,7 @@ export function StudentsPage() {
 
   const departments = useMemo(() => {
     const values = new Map<string, string>();
-    students.forEach((student) => {
+    allowedStudents.forEach((student) => {
       if (student.departmentId) values.set(student.departmentId, departmentDisplay(student));
     });
     return [...values.entries()].sort((a, b) => a[1].localeCompare(b[1]));
@@ -120,7 +130,7 @@ export function StudentsPage() {
 
   const periods = useMemo(() => {
     const values = new Map<string, string>();
-    students.forEach((student) => {
+    allowedStudents.forEach((student) => {
       if (student.academicPeriodId) values.set(student.academicPeriodId, periodDisplay(student));
     });
     return [...values.entries()].sort((a, b) => a[1].localeCompare(b[1]));
@@ -128,7 +138,7 @@ export function StudentsPage() {
 
   const filteredStudents = useMemo(() => {
     const needle = search.trim().toLowerCase();
-    return students.filter((student) => {
+    return allowedStudents.filter((student) => {
       const haystack = [
         student.fullName,
         student.name,
@@ -147,7 +157,7 @@ export function StudentsPage() {
         && (departmentFilter === "ALL" || student.departmentId === departmentFilter)
         && (periodFilter === "ALL" || student.academicPeriodId === periodFilter);
     });
-  }, [periodFilter, departmentFilter, search, students]);
+  }, [periodFilter, departmentFilter, search, allowedStudents]);
 
   const activeStudents = filteredStudents.filter((student) => student.enrollmentStatus === "ACTIVE" || student.status === "ACTIVE").length;
   const departmentCount = new Set(filteredStudents.map((student) => student.departmentId).filter(Boolean)).size;
@@ -268,10 +278,12 @@ export function StudentsPage() {
               {branches.map((branch) => <option key={branch.id} value={branch.id}>{branch.name}</option>)}
             </select>
           )}
-          <select value={departmentFilter} onChange={(e) => setDepartmentFilter(e.target.value)} className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100">
-            <option value="ALL">All departments</option>
-            {departments.map(([id, label]) => <option key={id} value={id}>{label}</option>)}
-          </select>
+          {!hodDepartment && (
+            <select value={departmentFilter} onChange={(e) => setDepartmentFilter(e.target.value)} className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100">
+              <option value="ALL">All departments</option>
+              {departments.map(([id, label]) => <option key={id} value={id}>{label}</option>)}
+            </select>
+          )}
           <select value={periodFilter} onChange={(e) => setPeriodFilter(e.target.value)} className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100">
             <option value="ALL">All Year/Semester</option>
             {periods.map(([id, label]) => <option key={id} value={id}>{label}</option>)}

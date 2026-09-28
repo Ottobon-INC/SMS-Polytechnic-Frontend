@@ -1,4 +1,4 @@
-export type PortalKey = "institution" | "branch" | "office" | "parent" | "platform";
+export type PortalKey = "institution" | "branch" | "office" | "parent" | "platform" | "student" | "hod";
 
 export type AuthenticatedUser = {
   id: string;

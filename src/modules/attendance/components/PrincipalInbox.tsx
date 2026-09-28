@@ -2,6 +2,7 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { useAttendanceSessions } from "../hooks/useAttendance";
 import { AlertCircle, Loader2, CheckCircle2, Clock, FileCheck, ArrowRight } from "lucide-react";
+import { useAuth } from "../../authentication/providers/AuthProvider";
 import type { AttendanceSessionListItem } from "../types/attendance.types";
 
 const statusConfig = {
@@ -27,6 +28,13 @@ const statusConfig = {
 
 export const PrincipalInbox: React.FC = () => {
   const navigate = useNavigate();
+  const auth = useAuth();
+  
+  const hodDepartmentMatch = auth.activeContext?.role_codes.includes("HOD") && auth.appUser?.email
+    ? auth.appUser.email.match(/^hod\.([a-z0-9_]+)@/)
+    : null;
+  const hodDepartment = hodDepartmentMatch ? hodDepartmentMatch[1].toUpperCase() : null;
+
   // Fetch all sessions the Principal has access to, then filter locally
   const { data: allSessions, isLoading, error } = useAttendanceSessions();
 
@@ -51,7 +59,15 @@ export const PrincipalInbox: React.FC = () => {
     );
   }
 
-  const sessions = allSessions || [];
+  const sessions = React.useMemo(() => {
+    if (!allSessions) return [];
+    if (!hodDepartment) return allSessions;
+    return allSessions.filter(s => {
+      const dept = String(s.departmentName || s.departmentCode || "").toUpperCase();
+      return dept === hodDepartment || dept.includes(hodDepartment);
+    });
+  }, [allSessions, hodDepartment]);
+
   const pendingSessions = sessions.filter((s) => s.status === "SUBMITTED");
 
   // Helper function to render a session card

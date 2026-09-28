@@ -148,6 +148,7 @@ export const UsersPage: React.FC = () => {
   const roleLabels: Record<string, string> = {
     INSTITUTION_ADMIN: 'Dean',
     BRANCH_ADMIN: 'Principal',
+    HOD: 'Head of Dept (HOD)',
     OFFICE_STAFF: 'Office Staff',
     PARENT_GUARDIAN: 'Parent',
     PLATFORM_ADMIN: 'Platform Admin',
@@ -159,6 +160,7 @@ export const UsersPage: React.FC = () => {
   const roleStyles = (roleCode: string) => {
     if (roleCode === 'INSTITUTION_ADMIN') return 'bg-purple-50 text-purple-800 border-purple-200';
     if (roleCode === 'BRANCH_ADMIN') return 'bg-teal-50 text-teal-800 border-teal-200';
+    if (roleCode === 'HOD') return 'bg-emerald-50 text-emerald-800 border-emerald-200';
     if (roleCode === 'OFFICE_STAFF') return 'bg-sky-50 text-sky-800 border-sky-200';
     if (roleCode === 'PARENT_GUARDIAN') return 'bg-amber-50 text-amber-800 border-amber-200';
     return 'bg-slate-100 text-slate-700 border-slate-200';

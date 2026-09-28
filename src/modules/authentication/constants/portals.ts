@@ -38,6 +38,18 @@ export const portalDefinitions: Record<
     description: "Ottobon platform operations, tenants, subscriptions and system health.",
     expectedRoles: ["PLATFORM_ADMIN"],
     dashboardPath: "/platform-admin"
+  },
+  student: {
+    label: "Student",
+    description: "View attendance, fees, marks and personal details.",
+    expectedRoles: ["STUDENT"],
+    dashboardPath: "/student-portal"
+  },
+  hod: {
+    label: "Head of Department (HOD)",
+    description: "Department-level curriculum structure, subjects, timetable, marks entry and academic oversight.",
+    expectedRoles: ["HOD", "BRANCH_ADMIN"],
+    dashboardPath: "/dashboard"
   }
 };
 
@@ -45,6 +57,8 @@ export function getPortalForRole(roleCode: string): PortalKey {
   if (roleCode === "PLATFORM_ADMIN") return "platform";
   if (roleCode === "INSTITUTION_ADMIN") return "institution";
   if (roleCode === "BRANCH_ADMIN") return "branch";
+  if (roleCode === "HOD") return "hod";
   if (roleCode === "PARENT_GUARDIAN") return "parent";
+  if (roleCode === "STUDENT") return "student";
   return "office";
 }

@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import {
   ArrowRight,
+  BookOpen,
   Building2,
   GraduationCap,
   LayoutDashboard,
@@ -10,7 +11,7 @@ import {
 import type { ComponentType } from "react";
 import type { PortalKey } from "../types/authContext.types";
 
-const institutionPortals = ["institution", "branch", "office", "parent"] as const;
+const institutionPortals = ["institution", "branch", "hod", "office", "parent", "student"] as const;
 
 const portalCards: Record<
   (typeof institutionPortals)[number],
@@ -36,6 +37,13 @@ const portalCards: Record<
     icon: School,
     tone: "blue"
   },
+  hod: {
+    title: "HOD Portal",
+    scope: "Department & Year Scope",
+    description: "Curriculum structure, subjects, timetable, and department marks entry across all years.",
+    icon: BookOpen,
+    tone: "teal"
+  },
   office: {
     title: "Office Staff",
     scope: "Operations",
@@ -49,6 +57,13 @@ const portalCards: Record<
     description: "Real-time attendance, fee receipts, report cards, and live alerts.",
     icon: UsersRound,
     tone: "amber"
+  },
+  student: {
+    title: "Student Portal",
+    scope: "Student Access",
+    description: "View your attendance, fee receipts, report cards, and schedules.",
+    icon: GraduationCap,
+    tone: "cyan"
   }
 };
 

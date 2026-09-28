@@ -54,6 +54,48 @@ export function FeesPage() {
   const [success, setSuccess] = useState<string | null>(null);
   const [query, setQuery] = useState("");
 
+  const hodDepartmentMatch = auth.activeContext?.role_codes.includes("HOD") && auth.appUser?.email
+    ? auth.appUser.email.match(/^hod\.([a-z0-9_]+)@/)
+    : null;
+  const hodDepartment = hodDepartmentMatch ? hodDepartmentMatch[1].toUpperCase() : null;
+
+  const allowedAccounts = useMemo(() => {
+    if (!hodDepartment) return accounts;
+    return accounts.filter(a => a.department_code === hodDepartment || a.department_name?.toUpperCase().includes(hodDepartment));
+  }, [accounts, hodDepartment]);
+
+  const totals = useMemo(
+    () =>
+      allowedAccounts.reduce(
+        (acc, account) => ({
+          total: acc.total + Number(account.total_amount),
+          paid: acc.paid + Number(account.paid_amount),
+          balance: acc.balance + Number(account.balance_amount),
+        }),
+        { total: 0, paid: 0, balance: 0 }
+      ),
+    [allowedAccounts]
+  );
+
+  const filteredAccounts = useMemo(() => {
+    const term = query.trim().toLowerCase();
+    if (!term) return allowedAccounts;
+    return allowedAccounts.filter((account) =>
+      [
+        account.student_name,
+        account.admission_number,
+        account.fee_structure_name,
+        account.academic_year,
+        account.department_code,
+        account.academic_period_code,
+        account.section_name,
+        account.status,
+      ]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(term))
+    );
+  }, [allowedAccounts, query]);
+
   const [accountForm, setAccountForm] = useState({
     enrollmentId: "",
     feeStructureName: "Annual Fee",
@@ -69,47 +111,22 @@ export function FeesPage() {
     notes: "",
   });
 
-  const totals = useMemo(
-    () =>
-      accounts.reduce(
-        (acc, account) => ({
-          total: acc.total + Number(account.total_amount),
-          paid: acc.paid + Number(account.paid_amount),
-          balance: acc.balance + Number(account.balance_amount),
-        }),
-        { total: 0, paid: 0, balance: 0 }
-      ),
-    [accounts]
-  );
-
-  const filteredAccounts = useMemo(() => {
-    const term = query.trim().toLowerCase();
-    if (!term) return accounts;
-    return accounts.filter((account) =>
-      [
-        account.student_name,
-        account.admission_number,
-        account.fee_structure_name,
-        account.academic_year,
-        account.department_code,
-        account.academic_period_code,
-        account.section_name,
-        account.status,
-      ]
-        .filter(Boolean)
-        .some((value) => String(value).toLowerCase().includes(term))
-    );
-  }, [accounts, query]);
-
   async function loadData() {
     setError(null);
     const [accountData, optionData] = await Promise.all([
       feesApi.listAccounts(),
       canAssignFees ? feesApi.listSetupOptions() : Promise.resolve([] as FeeEnrollmentOption[]),
     ]);
+    
     setAccounts(accountData);
-    setOptions(optionData);
-    setAccountForm((prev) => ({ ...prev, enrollmentId: prev.enrollmentId || optionData[0]?.enrollment_id || "" }));
+    
+    // Filter options for HOD as well
+    const allowedOptions = hodDepartment 
+      ? optionData.filter(o => o.department_code === hodDepartment || o.department_name?.toUpperCase().includes(hodDepartment))
+      : optionData;
+    setOptions(allowedOptions);
+    
+    setAccountForm((prev) => ({ ...prev, enrollmentId: prev.enrollmentId || allowedOptions[0]?.enrollment_id || "" }));
   }
 
   useEffect(() => {

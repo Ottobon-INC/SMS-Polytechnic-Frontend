@@ -1,10 +1,12 @@
 import { useState } from "react";
 import {
+  BookOpen,
   Building2,
   GraduationCap,
   LockKeyhole,
   ShieldCheck,
   Users,
+  User,
 } from "lucide-react";
 import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { LoginForm } from "../components/LoginForm";
@@ -20,6 +22,8 @@ const validPortals = new Set<PortalKey>([
   "office",
   "parent",
   "platform",
+  "student",
+  "hod",
 ]);
 
 const portalExperience: Record<
@@ -86,6 +90,26 @@ const portalExperience: Record<
       "Support access",
     ],
     proof: "Platform boundary",
+  },
+  student: {
+    accent: "indigo",
+    Icon: User,
+    promise: "Sign in to view your academics, timetable, and published exam results.",
+    highlights: ["Academics", "Timetable", "Exam Results", "Profile"],
+    proof: "Student-bound access",
+  },
+  hod: {
+    accent: "teal",
+    Icon: BookOpen,
+    promise:
+      "Sign in as Head of Department to manage curriculum, weekly timetables, subjects, and departmental marks across all years & semesters.",
+    highlights: [
+      "Curriculum & Syllabus",
+      "All Years (1st Yr, Sem 3-6)",
+      "Timetable & Offerings",
+      "Marks & Attendance Oversight",
+    ],
+    proof: "Department-scoped authority",
   },
 };
 

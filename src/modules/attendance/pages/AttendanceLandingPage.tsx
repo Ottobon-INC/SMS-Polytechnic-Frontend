@@ -21,10 +21,11 @@ export const AttendanceLandingPage: React.FC = () => {
   const auth = useAuth();
   const canMark = auth.hasPermission("attendance.mark");
   const canFinalize = auth.hasPermission("attendance.finalize");
+  const isHOD = auth.activeContext?.role_codes.includes("HOD");
 
-  const isOfficeStaff = canMark;
-  const isPrincipal = canFinalize && !canMark;
-  const isInstitutionAdmin = !canMark && !canFinalize;
+  const isOfficeStaff = canMark && !isHOD;
+  const isPrincipal = (canFinalize && !canMark && !isHOD) || auth.activeContext?.role_codes.includes("BRANCH_ADMIN");
+  const isInstitutionAdmin = !canMark && !canFinalize && !isHOD;
 
   const createSessionMutation = useCreateAttendanceSession();
 
@@ -50,6 +51,15 @@ export const AttendanceLandingPage: React.FC = () => {
         subtitle: "Select a class to begin marking today's attendance.",
         accent: "from-teal-500 to-emerald-600",
         badge: "Office Staff",
+        badgeColor: "bg-teal-500/20 text-teal-300 border-teal-500/30",
+      }
+    : isHOD
+    ? {
+        icon: <ShieldCheck className="w-6 h-6" />,
+        heading: "Department Attendance Review",
+        subtitle: "Sessions awaiting your review and finalization.",
+        accent: "from-teal-500 to-emerald-600",
+        badge: "Head of Department",
         badgeColor: "bg-teal-500/20 text-teal-300 border-teal-500/30",
       }
     : isPrincipal
@@ -102,7 +112,7 @@ export const AttendanceLandingPage: React.FC = () => {
 
       {/* Main Content */}
       <div className="max-w-6xl mx-auto px-4 md:px-6 py-8">
-        {isPrincipal ? (
+        {isPrincipal || isHOD ? (
           <PrincipalInbox />
         ) : isInstitutionAdmin ? (
           <DeanOverview />

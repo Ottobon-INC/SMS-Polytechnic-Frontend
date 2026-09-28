@@ -41,6 +41,7 @@ const PORTAL_CAPTIONS: Record<string, string> = {
   OFFICE_STAFF: "Staff Portal",
   PARENT_GUARDIAN: "Parent Portal",
   PLATFORM_ADMIN: "Platform Portal",
+  HOD: "HOD Portal",
 };
 
 const COLLAPSED = 56;

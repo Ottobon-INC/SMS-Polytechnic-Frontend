@@ -271,6 +271,7 @@ export const BranchesPage: React.FC = () => {
   const roleLabels: Record<string, string> = {
     INSTITUTION_ADMIN: 'Institution Admin / Dean',
     BRANCH_ADMIN: 'Principal / Campus Admin',
+    HOD: 'Head of Department (HOD)',
     OFFICE_STAFF: 'Office Staff',
     PARENT_GUARDIAN: 'Parent / Guardian',
   };

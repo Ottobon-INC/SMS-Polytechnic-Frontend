@@ -2,6 +2,7 @@ import { env } from "../../app/config/env";
 
 const selectedAssignmentStorageKey = "sms.activeAccessAssignmentId";
 const accessTokenStorageKey = "sms.accessToken";
+const studentAccessTokenStorageKey = "student_access_token";
 
 export function getStoredAccessToken(): string | null {
   return window.localStorage.getItem(accessTokenStorageKey);
@@ -13,6 +14,18 @@ export function storeAccessToken(accessToken: string | null): void {
     return;
   }
   window.localStorage.setItem(accessTokenStorageKey, accessToken);
+}
+
+export function getStoredStudentAccessToken(): string | null {
+  return window.localStorage.getItem(studentAccessTokenStorageKey);
+}
+
+export function storeStudentAccessToken(accessToken: string | null): void {
+  if (accessToken == null) {
+    window.localStorage.removeItem(studentAccessTokenStorageKey);
+    return;
+  }
+  window.localStorage.setItem(studentAccessTokenStorageKey, accessToken);
 }
 
 export function getStoredAccessAssignmentId(): string | null {
@@ -32,8 +45,12 @@ async function buildHeaders(): Promise<HeadersInit> {
     Accept: "application/json",
     "Content-Type": "application/json"
   };
+  // Prefer student token if available
+  const studentAccessToken = getStoredStudentAccessToken();
   const accessToken = getStoredAccessToken();
-  if (accessToken != null) {
+  if (studentAccessToken != null) {
+    headers.Authorization = `Bearer ${studentAccessToken}`;
+  } else if (accessToken != null) {
     headers.Authorization = `Bearer ${accessToken}`;
   }
   const assignmentId = getStoredAccessAssignmentId();

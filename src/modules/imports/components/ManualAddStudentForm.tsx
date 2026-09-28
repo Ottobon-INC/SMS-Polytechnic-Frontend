@@ -13,6 +13,7 @@ import {
   Users,
   ChevronDown,
 } from "lucide-react";
+import { useAuth } from "../../authentication/providers/AuthProvider";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -283,6 +284,7 @@ function SummaryField({
 // ─── Main Form ────────────────────────────────────────────────────────────────
 
 export function ManualAddStudentForm() {
+  const auth = useAuth();
   const { useBranches, useAcademicYears, useAcademicPeriods, useDepartments, useSections, useManualAddStudent } =
     useImportsApi();
 
@@ -323,8 +325,19 @@ export function ManualAddStudentForm() {
   const { data: branches, isLoading: loadingBranches } = useBranches();
   const { data: academicYears, isLoading: loadingYears } = useAcademicYears();
   const { data: academicPeriods, isLoading: loadingPeriods } = useAcademicPeriods();
-  const { data: departments, isLoading: loadingDepartments } = useDepartments(branchId, academicYearId);
+  const { data: departmentsRaw, isLoading: loadingDepartments } = useDepartments(branchId, academicYearId);
   const { data: sections, isLoading: loadingSections } = useSections(branchId, academicYearId, departmentId, academicPeriodId);
+
+  const hodDepartmentMatch = auth.activeContext?.role_codes.includes("HOD") && auth.appUser?.email
+    ? auth.appUser.email.match(/^hod\.([a-z0-9_]+)@/)
+    : null;
+  const hodDepartment = hodDepartmentMatch ? hodDepartmentMatch[1].toUpperCase() : null;
+
+  const departments = useMemo(() => {
+    if (!departmentsRaw) return [];
+    if (!hodDepartment) return departmentsRaw;
+    return departmentsRaw.filter(d => d.code === hodDepartment || formatDepartmentLabel(d).toUpperCase().includes(hodDepartment));
+  }, [departmentsRaw, hodDepartment]);
 
   // Auto-select branch if only one
   useEffect(() => {
@@ -332,6 +345,13 @@ export function ManualAddStudentForm() {
       reset({ ...watch(), branch_id: branches[0].id });
     }
   }, [branches, branchId, reset, watch]);
+
+  // Auto-select department if only one (useful for HODs)
+  useEffect(() => {
+    if (departments && departments.length === 1 && !departmentId) {
+      setValue("department_id", departments[0].id);
+    }
+  }, [departments, departmentId, setValue]);
 
   // Cascade resets — preserve existing logic exactly
   useEffect(() => {
@@ -471,6 +491,7 @@ export function ManualAddStudentForm() {
             <SelectField
               value={departmentId}
               onChange={(v) => setValue("department_id", v)}
+              disabled={departments?.length === 1}
               loading={loadingDepartments}
             >
               <option value="">Select Department</option>

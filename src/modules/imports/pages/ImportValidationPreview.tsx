@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   CheckCircle2,
@@ -111,6 +111,11 @@ export function ImportValidationPreview({ importType = "students" }: ImportValid
   const importKindLabel = importType === "fees" ? "Fee Import" : "Student Import";
   const importActionLabel = importType === "fees" ? "Import Fee Accounts" : "Import Students";
   const importBackPath = importType === "fees" ? "/imports/fees" : "/imports";
+
+  const hodDepartmentMatch = auth.activeContext?.role_codes.includes("HOD") && auth.appUser?.email
+    ? auth.appUser.email.match(/^hod\.([a-z0-9_]+)@/)
+    : null;
+  const hodDepartment = hodDepartmentMatch ? hodDepartmentMatch[1].toUpperCase() : null;
 
   const [data, setData] = useState<PreviewResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -258,7 +263,29 @@ export function ImportValidationPreview({ importType = "students" }: ImportValid
   const totalRows = getSummaryNumber(summary, "total_rows");
   const validRows = getSummaryNumber(summary, "valid_rows");
   const warningRows = getSummaryNumber(summary, "warning_rows");
-  const rejectedRows = getSummaryNumber(summary, "rejected_rows");
+  
+  const processedRows = useMemo(() => {
+    if (!rows) return [];
+    if (!hodDepartment) return rows;
+    return rows.map((row: ImportRowResult) => {
+      const deptField = importType === "fees" ? "Department" : "Department Code";
+      const deptValue = String(row.raw_data[deptField] || "").toUpperCase();
+      if (deptValue && deptValue !== hodDepartment) {
+        return {
+          ...row,
+          validation_status: "REJECTED" as const,
+          errors: [
+            ...(row.errors || []),
+            { field: deptField, message: `Unauthorized: You can only import records for ${hodDepartment}` }
+          ]
+        };
+      }
+      return row;
+    });
+  }, [rows, hodDepartment, importType]);
+
+  const clientRejectedCount = processedRows.filter(r => r.validation_status === "REJECTED" && rows.find((orig: ImportRowResult) => orig.id === r.id)?.validation_status !== "REJECTED").length;
+  const rejectedRows = getSummaryNumber(summary, "rejected_rows") + clientRejectedCount;
 
   const hasRejected = rejectedRows > 0;
   const hasCommitPermission = auth.hasPermission("import.commit");
@@ -423,7 +450,7 @@ export function ImportValidationPreview({ importType = "students" }: ImportValid
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {rows.map((row: ImportRowResult) => {
+                {processedRows.map((row: ImportRowResult) => {
                   const isRejected = row.validation_status === "REJECTED";
                   const isWarning = row.validation_status === "WARNING";
                   const isValid = row.validation_status === "VALID";

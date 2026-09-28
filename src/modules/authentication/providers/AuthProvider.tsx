@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { queryClient } from "../../../app/query/queryClient";
-import { getStoredAccessToken, storeAccessAssignmentId, storeAccessToken } from "../../../api/client/apiClient";
+import { getStoredAccessToken, storeAccessAssignmentId, storeAccessToken, getStoredStudentAccessToken, storeStudentAccessToken } from "../../../api/client/apiClient";
 import { dashboardApi } from "../../dashboard/api/dashboardApi";
 import { fetchCurrentUser, loginWithPassword, selectAccessContext } from "../api/authClient";
 import { portalDefinitions } from "../constants/portals";
@@ -20,7 +20,7 @@ function contextMatchesPortal(context: AccessContextSummary, portal: PortalKey):
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [isAuthenticated, setIsAuthenticated] = useState(() => getStoredAccessToken() != null);
+  const [isAuthenticated, setIsAuthenticated] = useState(() => getStoredAccessToken() != null || getStoredStudentAccessToken() != null);
   const [loading, setLoading] = useState(true);
   const [contextResolved, setContextResolved] = useState(false);
   const [appUser, setAppUser] = useState<AuthenticatedUser | null>(null);
@@ -44,12 +44,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let mounted = true;
     async function restoreSession() {
       if (!mounted) return;
-      if (getStoredAccessToken() != null) {
+      if (getStoredAccessToken() != null || getStoredStudentAccessToken() != null) {
         try {
           await refreshApplicationContext();
           setIsAuthenticated(true);
         } catch {
           storeAccessToken(null);
+          storeStudentAccessToken(null);
           setAppUser(null);
           setAvailableContexts([]);
           setActiveContext(null);
@@ -72,8 +73,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     async (credentials: LoginCredentials, portal: PortalKey) => {
       setContextResolved(false);
       const response = await loginWithPassword(credentials.email, credentials.password, portal);
+      if (portal === "student") {
+        storeStudentAccessToken(response.access_token);
+        setIsAuthenticated(true);
+        
+        // For student portal, we assume the response format is different or we just mock a context
+        const mockContext: ActiveContext = {
+          assignment_id: "student-assignment",
+          tenant_id: null,
+          branch_id: null,
+          role_codes: ["STUDENT"],
+          permissions: [],
+          enabled_modules: [],
+          scope_type: "STUDENT"
+        };
+        const studentData = (response as any).student;
+        const mockUser: AuthenticatedUser = {
+          id: studentData?.id || "student-id",
+          display_name: studentData?.name || studentData?.fullName || "Student",
+          email: credentials.email,
+          status: "ACTIVE",
+          account_category: "STUDENT"
+        };
+        const simulatedResponse = {
+          user: mockUser,
+          available_contexts: [{
+            assignment_id: "student-assignment",
+            tenant: null,
+            branch: null,
+            role: { code: "STUDENT", label: "Student" },
+            scope_type: "STUDENT",
+            enabled_modules: [],
+            permissions: []
+          }],
+          active_context: mockContext
+        };
+        applyCurrentUser(simulatedResponse);
+        return mockContext;
+      }
+
       storeAccessToken(response.access_token);
       setIsAuthenticated(true);
+      
       const matchingContexts = response.available_contexts.filter((context) =>
         contextMatchesPortal(context, portal)
       );
@@ -100,6 +141,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = useCallback(async () => {
       storeAccessToken(null);
+      storeStudentAccessToken(null);
       setIsAuthenticated(false);
       setAppUser(null);
       setAvailableContexts([]);

@@ -24,6 +24,7 @@ import { InstitutionSetupPage } from "../../modules/institution/pages/Institutio
 import { ParentPortalShellPage } from "../../modules/parent-portal/pages/ParentPortalShellPage";
 import { PlatformDashboardShellPage } from "../../modules/platform-admin/pages/PlatformDashboardShellPage";
 import { StudentsPage } from "../../modules/students/pages/StudentsPage";
+import { StudentPortalShellPage } from "../../modules/students/pages/StudentPortalShellPage";
 import { UsersPage } from "../../modules/users/pages/UsersPage";
 import { AttendanceLandingPage } from "../../modules/attendance/pages/AttendanceLandingPage";
 import { AttendanceSessionPage } from "../../modules/attendance/pages/AttendanceSessionPage";
@@ -58,6 +59,7 @@ const router = createBrowserRouter([
   {
     element: <ProtectedRoute />,
     children: [
+      { path: "/student-portal", element: <StudentPortalShellPage /> },
       {
         element: <AppShellLayout />,
         children: [
